@@ -1,0 +1,5 @@
+
+*.log
+firebase-debug.log
+*.enc
+/node_modulesb

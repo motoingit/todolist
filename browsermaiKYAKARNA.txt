@@ -1,0 +1,12 @@
+right click and page source,?
+right clixk and inspect
+
+
+
+bootstrap mai pehelese hi lika hai design
+
+
+devlopmode - indirect rull like python ./app
+but in off devlopmode - flask run
+
+crud operations are - create read update delete

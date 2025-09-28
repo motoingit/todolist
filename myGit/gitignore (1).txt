@@ -1,0 +1,27 @@
+
+                                        # .gitignore
+
+
+# --- Logs & Temporary Files ---
+# Ignore log files, which are generated during runtime.
+*.log
+firebase-debug.log
+
+
+# encrypted data
+*.enc
+# as any one can install the dependencies using requirements.txt or  simply running the npm install command to install package . json.
+/node_modulesb
+# exe files
+*.exe
+# # Ignore only .txt files inside a 'logs' folder
+# logs/*.txt
+
+# Ignore a specific note file
+my_personal_notes.txt
+
+
+
+                                    # Explanation:
+# To ignore all .exe or .txt files, you add the lines *.exe and *.txt to your .gitignore file.
+# The asterisk (*) acts as a wildcard, which means "match any sequence of characters." So, *.exe will match any file that ends with the .exe extension, regardless of its name.
