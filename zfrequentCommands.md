@@ -9,6 +9,6 @@ python -m pip install x
 
 python .\app.py 
 
-pip freeze > requirements.txt   
+python -m pip freeze > requirements.txt   
 
-alt+ f7 to clear termial cahe
+alt + f7 to clear termial cahe
