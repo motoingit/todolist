@@ -1,25 +1,58 @@
-from flask import Flask, render_template, request, redirect # , render template with return
-from datetime import datetime, timezone
-##################3
-# SQLAlchemy != SQLALchemy#
-from flask_sqlalchemy import SQLAlchemy # for the classes of database and func for time
+from flask import Flask, render_template, request, redirect
+from datetime import datetime
+import pytz
+import os
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import or_
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = "sqlite:///todo.db" #"sqlite:////tmp/test.db"
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False # BASICALLY ITS FOR SIGNAL EMMITING / and even if it is not written it just sets implicity
+# Configure instance path
+app.config['INSTANCE_PATH'] = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance')
+os.makedirs(app.config['INSTANCE_PATH'], exist_ok=True)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(app.config['INSTANCE_PATH'], 'todo.db')
+app.config['SQLALCHEMY_BINDS'] = {
+    'log': 'sqlite:///' + os.path.join(app.config['INSTANCE_PATH'], 'log.db')
+}
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
-##################3
+
+IST = pytz.timezone('Asia/Kolkata')
 
 class Todo(db.Model):
-    sno = db.Column(db.Integer, primary_key = True)
-    title = db.Column(db.String(200), nullable = False) # should not null
-    desc = db.Column(db.String(500), nullable = False)
-    date_created = db.Column(db.DateTime, default = lambda: datetime.now(timezone.utc)) # lambda: is new here
-                                                               # datetime.utcnow    nowdepricated ?
-    def __repr__(self) -> str: #print karnekeliye
-         return f"{self.sno} - {self.title}"
+    sno = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    desc = db.Column(db.String(500), nullable=False)
+    date_created = db.Column(db.DateTime, default=lambda: datetime.now(IST))
+
+    def __repr__(self) -> str:
+        return f"{self.sno} - {self.title}"
+
+class Log(db.Model):
+    __bind_key__ = 'log'
+    id = db.Column(db.Integer, primary_key=True)
+    level = db.Column(db.String(50), nullable=False)
+    message = db.Column(db.String(500), nullable=False)
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(IST))
+
+    def __repr__(self):
+        return f"[{self.timestamp}] [{self.level}] {self.message}"
+
+def log_message(level, message):
+    log = Log(level=level, message=message)
+    db.session.add(log)
+    db.session.commit()
+
+@app.cli.command("init-db")
+def init_db_command():
+    """Initialize the database."""
+    try:
+        db.create_all()
+        print("Initialized the database.")
+    except Exception as e:
+        print(f"Error initializing database: {e}")
 
 @app.route("/", methods=['GET', 'POST'])
 def index():
@@ -30,16 +63,22 @@ def index():
             todo = Todo(title=title, desc=desc)
             db.session.add(todo)
             db.session.commit()
+            log_message('INFO', f'Added new todo with title: {title}')
         return redirect('/')
 
-    allTodo = Todo.query.all()
+    search_query = request.args.get('search')
+    if search_query:
+        log_message('INFO', f'Searched for: {search_query}')
+        allTodo = Todo.query.filter(or_(Todo.title.contains(search_query), Todo.desc.contains(search_query))).all()
+    else:
+        allTodo = Todo.query.all()
     return render_template('index.html', allTodo=allTodo)
-
 
 @app.route("/update/<int:sno>", methods=['GET', 'POST'])
 def update(sno):
     todo = db.session.get(Todo, sno)
     if not todo:
+        log_message('WARNING', f'Attempted to update non-existent todo with sno: {sno}')
         return redirect('/')
 
     if request.method == 'POST':
@@ -49,10 +88,10 @@ def update(sno):
             todo.title = title
             todo.desc = desc
             db.session.commit()
+            log_message('INFO', f'Updated todo with sno: {sno}')
         return redirect('/')
 
     return render_template('update.html', todo=todo)
-
 
 @app.route("/delete/<int:sno>")
 def delete(sno):
@@ -60,34 +99,14 @@ def delete(sno):
     if todo:
         db.session.delete(todo)
         db.session.commit()
+        log_message('INFO', f'Deleted todo with sno: {sno}')
+    else:
+        log_message('WARNING', f'Attempted to delete non-existent todo with sno: {sno}')
     return redirect('/')
-
 
 @app.route("/about")
 def about():
     return render_template('about.html')
 
-# @app.route("/show")
-# def show():
-#     allTodo = Todo.query.all()
-#     result = []
-#     for todo in allTodo:
-#         result.append({
-#             'sno': todo.sno,
-#             'title': todo.title,
-#             'desc': todo.desc,
-#             'date_created': todo.date_created.strftime('%Y-%m-%d %H:%M:%S')
-#         })
-#     return result  # Flask automatically converts to JSON
-
-@app.cli.command("init-db")
-def init_db_command():
-    """Clears the existing data and creates new tables."""
-    db.create_all()
-    print("Initialized the database.")
-
-if __name__ == "__main__":
-    # The app.run() call is not needed here if you use `flask run`
-    # The `if __name__` block is kept for users who might still run `python app.py`
-    # However, the recommended way is to use the Flask CLI.
-    app.run(debug=True) #in times of devlopment it should True
+if __name__ == '__main__':
+    app.run(debug=True)

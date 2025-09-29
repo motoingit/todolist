@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Home{% endblock %}
-{% block boddy %}
+{% block body %}
 <div class="container mt-5">
     <div class="row">
         <div class="col-md-6 offset-md-3">
@@ -22,10 +22,22 @@
     <div class="row mt-5">
         <div class="col-md-10 offset-md-1">
             <h2 class="text-center mb-4">Your Todos</h2>
+            <form action="/" method="GET" class="mb-4">
+                <div class="input-group">
+                    <input type="text" name="search" class="form-control" placeholder="Search for a todo...">
+                    <button type="submit" class="btn btn-outline-secondary">Search</button>
+                </div>
+            </form>
             {% if allTodo|length == 0 %}
-            <div class="alert alert-info" role="alert">
-                No todos yet. Add one above!
-            </div>
+                {% if request.args.get('search') %}
+                    <div class="alert alert-warning" role="alert">
+                        No todo found matching your search criteria.
+                    </div>
+                {% else %}
+                    <div class="alert alert-info" role="alert">
+                        No todos yet. Add one above!
+                    </div>
+                {% endif %}
             {% else %}
             <ul class="list-group">
                 {% for todo in allTodo %}

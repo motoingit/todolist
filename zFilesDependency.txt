@@ -1,5 +1,6 @@
 static for files any download
-template 
+template for html
+
 http://127.0.0.1:5000/static/filename      //can download the file
 
 
